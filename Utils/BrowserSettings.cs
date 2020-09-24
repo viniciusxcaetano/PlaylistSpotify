@@ -7,7 +7,6 @@ namespace PlaylistSpotify.Utils
     {
         public static ChromeDriverService chromeDriverService { get; set; }
         public static ChromeOptions chromeOptions { get; set; }
-
         public static ChromeDriverService ChromeDriverService
         {
             get
@@ -25,10 +24,9 @@ namespace PlaylistSpotify.Utils
             {
                 var downloadPrefs = new Dictionary<string, object>
                 {
-                {"default_directory", @""+pathFolder+""},
-                {"directory_upgrade", true}
+                    {"default_directory", @""+pathFolder+""},
+                    {"directory_upgrade", true}
                 };
-
                 chromeOptions.AddUserProfilePreference("download", downloadPrefs);
             }
             //chromeOptions.AddArgument("headless"); //Not open the browser

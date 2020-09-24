@@ -75,13 +75,12 @@ namespace PlaylistSpotify.Services
 
             if (playlist.Name == "") // need this for the window when small
             {
-                WebElement = chromeDriver.FindElement(By.ClassName("TrackListHeader__entity-name"), 10);
+                WebElement = chromeDriver.FindElement(By.ClassName("TrackListHeader__entity-name"), 1);
                 string[] trackSplit = WebElement.Text.Split(new[] { "\r\n" }, StringSplitOptions.None);
                 playlist.Name = trackSplit[0];
             }
 
             var root = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/div[1]/div/div[2]/div/div/div[2]/section/div[4]/div/div[2]/div[2]"), 1);
-            var children = root.FindElement(By.XPath(".//div[1]/div/div/div[2]/div/div/span/span"));
 
             for (int i = 1; i < 1000; i++)
             {
@@ -112,12 +111,13 @@ namespace PlaylistSpotify.Services
 
         public void UpdatePlaylist(ChromeDriver chromeDriver, Playlist playlist)
         {
-            //foreach (var music in playlist.Music)
-            //{
             int count = 1;
-            for (int i = 0; i < 10; i++)
+
+            foreach (var music in playlist.Music)
             {
-                var music = playlist.Music[i];
+                //for (int i = 0; i < 10; i++)
+                //{
+                //    var music = playlist.Music[i];
                 var track = RemoveInvalidPathChars(count + " " + music.Artist + " - " + music.Name + ".mp3");
 
                 //Get file by number
@@ -147,27 +147,34 @@ namespace PlaylistSpotify.Services
             string name = RemoveNonAlpha(music.Name).Replace(" ", "+");
             string artist = RemoveNonAlpha(music.Artist).Replace(" ", "+");
             string downloadedTrack = "";
-            string youtubeUrl = "https://www.youtube.com/results?search_query=" + artist + "+" + name + "+audio";
-            chromeDriver.Navigate().GoToUrl(youtubeUrl);
-            IReadOnlyCollection<IWebElement> webElements = chromeDriver.FindElements(By.Id("video-title"), 10);
+            string youtubeSearch = "https://www.youtube.com/results?search_query=" + artist + "+" + name + "+audio";
+            chromeDriver.Navigate().GoToUrl(youtubeSearch);
+            IReadOnlyCollection<IWebElement> webElements = chromeDriver.FindElements(By.Id("video-title"), 1);
+            List<string> youtubeUrls = new List<string>();
 
             foreach (var we in webElements)
             {
-                youtubeUrl = we.GetAttribute("href");
+                youtubeUrls.Add(we.GetAttribute("href"));
+            }
+
+            for (int i = 0; i < youtubeUrls.Count; i++)
+            {
+                string youtubeUrl = youtubeUrls[i];
+
                 if (youtubeUrl != null)
                 {
-                    if (CheckDuration(chromeDriver))
+                    music.Number = count;
+                    downloadedTrack = YtMp3(chromeDriver, pathFolder, youtubeUrl);
+
+                    if (!string.IsNullOrEmpty(downloadedTrack))
                     {
-                        music.Number = count;
-                        downloadedTrack = DownloadFromYtmp3(chromeDriver, pathFolder, youtubeUrl);
                         break;
                     }
-                    break;
                 }
             }
             return downloadedTrack;
         }
-        public string DownloadFromYtmp3(ChromeDriver chromeDriver, string pathFolder, string youtubeUrl)
+        public string YtMp3(ChromeDriver chromeDriver, string pathFolder, string youtubeUrl)
         {
             string downloadedTrack = "";
             try
@@ -177,14 +184,14 @@ namespace PlaylistSpotify.Services
                 WebElement.SendKeys(youtubeUrl);
                 WebElement = chromeDriver.FindElement(By.Id("submit"), 1);
                 WebElement.Click();
-                //IWebElement error = chromeDriver.FindElement(By.Id("error"));
-                //if (error != null)
-                //{
-
-                //}
                 var listTracks1 = Directory.GetFiles(pathFolder, "*").Where(s => s.EndsWith(".crdownload")).Select(Path.GetFileName).ToList();
-
                 WebElement = chromeDriver.FindElement(By.XPath("//a[contains(text(),'Download')]"), 1);
+
+                if (WebElement == null)
+                {
+                    return "";
+                }
+
                 WebElement.Click();
                 List<String> tabs = new List<String>(chromeDriver.WindowHandles);
 
@@ -194,7 +201,6 @@ namespace PlaylistSpotify.Services
                     for (int i = 1; i < tabs.Count(); i++)
                     {
                         chromeDriver.SwitchTo().Window(tabs[i]);
-                        chromeDriver.Navigate().GoToUrl("https://google.com");
                         chromeDriver.Close();
                     }
                 }
@@ -219,7 +225,7 @@ namespace PlaylistSpotify.Services
             }
             catch (Exception)
             {
-                DownloadFromYtmp3(chromeDriver, pathFolder, youtubeUrl);
+                YtMp3(chromeDriver, pathFolder, youtubeUrl);
             }
             return downloadedTrack;
         }
@@ -323,7 +329,7 @@ namespace PlaylistSpotify.Services
                 //check if music duration is less than 9 minutes 
                 int duration = 9;
 
-                var element = chromeDriver.FindElement(By.XPath("//ytd-video-renderer//ytd-thumbnail-overlay-time-status-renderer"), 50);
+                var element = chromeDriver.FindElement(By.XPath("//ytd-video-renderer//ytd-thumbnail-overlay-time-status-renderer"), 1);
 
                 string[] time = element.Text.Split(new[] { ":" }, StringSplitOptions.None);
 

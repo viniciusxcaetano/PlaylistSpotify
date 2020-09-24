@@ -8,15 +8,20 @@ namespace PlaylistSpotify
     {
         public static IWebElement FindElement(this IWebDriver driver, By by, int count)
         {
-            try
+            if (count < 8)
             {
-                Thread.Sleep(2000);
-                return driver.FindElement(by);
+                try
+                {
+                    Thread.Sleep(2000);
+                    return driver.FindElement(by);
+                }
+                catch
+                {
+                    count++;
+                    return FindElement(driver, by, count);
+                }
             }
-            catch
-            {
-                return FindElement(driver, by, 10);
-            }
+            return null;
         }
 
         public static IReadOnlyCollection<IWebElement> FindElements(this IWebDriver driver, By by, int count)
@@ -28,7 +33,7 @@ namespace PlaylistSpotify
             }
             catch
             {
-                return FindElements(driver, by, 10);
+                return FindElements(driver, by, count);
             }
         }
     }
