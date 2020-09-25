@@ -115,14 +115,33 @@ namespace PlaylistSpotify.Services
 
             foreach (var music in playlist.Music)
             {
-                //for (int i = 0; i < 10; i++)
+                //for (int i = 0; i < 45; i++)
                 //{
-                //    var music = playlist.Music[i];
-                var track = RemoveInvalidPathChars(count + " " + music.Artist + " - " + music.Name + ".mp3");
+                //var music = playlist.Music[i];
+                string track;
+                if (count < 10)
+                {
+
+                    track = RemoveInvalidPathChars("0" + count + " " + music.Artist + " - " + music.Name + ".mp3");
+                }
+                else
+                {
+
+                    track = RemoveInvalidPathChars(count + " " + music.Artist + " - " + music.Name + ".mp3");
+                }
 
                 //Get file by number
                 DirectoryInfo pathDir = new DirectoryInfo(playlist.PathFolder);
-                var Tracks = pathDir.GetFiles("" + count + "*.mp3");
+                FileInfo[] Tracks;
+                if (count < 10)
+                {
+
+                    Tracks = pathDir.GetFiles("" + "0" + +count + "*.mp3");
+                }
+                else
+                {
+                    Tracks = pathDir.GetFiles("" + +count + "*.mp3");
+                }
 
                 if (Tracks.Any())
                 {
@@ -222,6 +241,7 @@ namespace PlaylistSpotify.Services
                         }
                     }
                 }
+                CheckIfDownloadedAll(pathFolder);
             }
             catch (Exception)
             {
@@ -235,8 +255,16 @@ namespace PlaylistSpotify.Services
             {
                 if (!string.IsNullOrEmpty(music.NameAfterDownload))
                 {
-                    string newTrackName = music.Number + " " + RemoveInvalidPathChars(music.Artist + " - " + music.Name + ".mp3");
+                    string newTrackName;
+                    if (music.Number < 10)
+                    {
+                        newTrackName = "0" + music.Number + " " + RemoveInvalidPathChars(music.Artist + " - " + music.Name + ".mp3");
+                    }
+                    else
+                    {
 
+                        newTrackName = music.Number + " " + RemoveInvalidPathChars(music.Artist + " - " + music.Name + ".mp3");
+                    }
                     File.Move(playlist.PathFolder + "\\" + music.NameAfterDownload + ".mp3", playlist.PathFolder + "\\" + newTrackName);
                 }
             }
