@@ -75,12 +75,12 @@ namespace PlaylistSpotify.Services
 
             if (playlist.Name == "") // need this for the window when small
             {
-                WebElement = chromeDriver.FindElement(By.ClassName("TrackListHeader__entity-name"), 1);
+                WebElement = chromeDriver.FindElement(By.ClassName("TrackListHeader__entity-name"), 1, 8);
                 string[] trackSplit = WebElement.Text.Split(new[] { "\r\n" }, StringSplitOptions.None);
                 playlist.Name = trackSplit[0];
             }
 
-            var root = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/div[1]/div/div[2]/div/div/div[2]/section/div[4]/div/div[2]/div[2]"), 1);
+            var root = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/div[1]/div/div[2]/div/div/div[2]/section/div[4]/div/div[2]/div[2]"), 1, 8);
 
             for (int i = 1; i < 1000; i++)
             {
@@ -199,12 +199,12 @@ namespace PlaylistSpotify.Services
             try
             {
                 chromeDriver.Navigate().GoToUrl("https://ytmp3.cc/en13/");
-                WebElement = chromeDriver.FindElement(By.Id("input"), 1);
+                WebElement = chromeDriver.FindElement(By.Id("input"), 1, 8);
                 WebElement.SendKeys(youtubeUrl);
-                WebElement = chromeDriver.FindElement(By.Id("submit"), 1);
+                WebElement = chromeDriver.FindElement(By.Id("submit"), 1, 8);
                 WebElement.Click();
                 var listTracks1 = Directory.GetFiles(pathFolder, "*").Where(s => s.EndsWith(".crdownload")).Select(Path.GetFileName).ToList();
-                WebElement = chromeDriver.FindElement(By.XPath("//a[contains(text(),'Download')]"), 1);
+                WebElement = chromeDriver.FindElement(By.XPath("//a[contains(text(),'Download')]"), 1, 100);
 
                 if (WebElement == null)
                 {
@@ -243,9 +243,12 @@ namespace PlaylistSpotify.Services
                 }
                 CheckIfDownloadedAll(pathFolder);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                YtMp3(chromeDriver, pathFolder, youtubeUrl);
+                if (ex.HResult != -2147024864)
+                {
+                    YtMp3(chromeDriver, pathFolder, youtubeUrl);
+                }
             }
             return downloadedTrack;
         }
@@ -265,7 +268,14 @@ namespace PlaylistSpotify.Services
 
                         newTrackName = music.Number + " " + RemoveInvalidPathChars(music.Artist + " - " + music.Name + ".mp3");
                     }
-                    File.Move(playlist.PathFolder + "\\" + music.NameAfterDownload + ".mp3", playlist.PathFolder + "\\" + newTrackName);
+                    try
+                    {
+                        File.Move(playlist.PathFolder + "\\" + music.NameAfterDownload + ".mp3", playlist.PathFolder + "\\" + newTrackName);
+                    }
+                    catch(Exception ex)
+                    {
+
+                    }
                 }
             }
         }
@@ -357,7 +367,7 @@ namespace PlaylistSpotify.Services
                 //check if music duration is less than 9 minutes 
                 int duration = 9;
 
-                var element = chromeDriver.FindElement(By.XPath("//ytd-video-renderer//ytd-thumbnail-overlay-time-status-renderer"), 1);
+                var element = chromeDriver.FindElement(By.XPath("//ytd-video-renderer//ytd-thumbnail-overlay-time-status-renderer"), 1, 8);
 
                 string[] time = element.Text.Split(new[] { ":" }, StringSplitOptions.None);
 

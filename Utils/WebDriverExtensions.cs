@@ -6,9 +6,9 @@ namespace PlaylistSpotify
 {
     public static class WebDriverExtensions
     {
-        public static IWebElement FindElement(this IWebDriver driver, By by, int count)
+        public static IWebElement FindElement(this IWebDriver driver, By by, int count, int times)
         {
-            if (count < 8)
+            if (count < times)
             {
                 try
                 {
@@ -18,7 +18,7 @@ namespace PlaylistSpotify
                 catch
                 {
                     count++;
-                    return FindElement(driver, by, count);
+                    return FindElement(driver, by, count, times);
                 }
             }
             return null;
