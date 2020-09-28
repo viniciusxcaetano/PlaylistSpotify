@@ -5,8 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Windows.Forms;
 
 namespace PlaylistSpotify.Services
@@ -15,7 +13,6 @@ namespace PlaylistSpotify.Services
     {
         List<Playlist> playlistsUpdated { get; set; }
         private IWebElement WebElement { get; set; }
-
         public List<Playlist> GetPlaylistDataToUpdate(string defaultPath)
         {
             if (string.IsNullOrWhiteSpace(defaultPath))
@@ -28,7 +25,6 @@ namespace PlaylistSpotify.Services
             if (directoryInfo.Exists)
             {
                 DirectoryInfo[] directorySpotify = directoryInfo.GetDirectories("*" + "Spotify" + "*.*");
-
 
                 if (directorySpotify.Any())
                 {
@@ -63,10 +59,8 @@ namespace PlaylistSpotify.Services
             }
             return playlistsUpdated;
         }
-
         public Playlist GetUpdatedPlaylist(ChromeDriver chromeDriver, Playlist playlist)
         {
-
             playlist.PathFolder = playlist.Device + "\\" + playlist.Name;
             playlist.PathUrlFile = playlist.PathFolder + "\\url.txt";
 
@@ -108,7 +102,6 @@ namespace PlaylistSpotify.Services
             }
             return playlist;
         }
-
         public void UpdatePlaylist(ChromeDriver chromeDriver, Playlist playlist)
         {
             int count = 1;
@@ -121,21 +114,19 @@ namespace PlaylistSpotify.Services
                 string track;
                 if (count < 10)
                 {
-
-                    track = RemoveInvalidPathChars("0" + count + " " + music.Artist + " - " + music.Name + ".mp3");
+                    track = BaseService.RemoveInvalidPathChars("0" + count + " " + music.Artist + " - " + music.Name + ".mp3");
                 }
                 else
                 {
-
-                    track = RemoveInvalidPathChars(count + " " + music.Artist + " - " + music.Name + ".mp3");
+                    track = BaseService.RemoveInvalidPathChars(count + " " + music.Artist + " - " + music.Name + ".mp3");
                 }
 
                 //Get file by number
                 DirectoryInfo pathDir = new DirectoryInfo(playlist.PathFolder);
                 FileInfo[] Tracks;
+
                 if (count < 10)
                 {
-
                     Tracks = pathDir.GetFiles("" + "0" + +count + "*.mp3");
                 }
                 else
@@ -148,240 +139,17 @@ namespace PlaylistSpotify.Services
                     if (Tracks.FirstOrDefault().Name != track)
                     {
                         File.Delete(playlist.PathFolder + "\\" + Tracks[0].Name);
-                        music.NameAfterDownload = Download(chromeDriver, playlist.PathFolder, music, count);
+                        music.NameAfterDownload = BaseService.Download(chromeDriver, playlist.PathFolder, music, count);
                     }
                 }
                 else
                 {
-                    music.NameAfterDownload = Download(chromeDriver, playlist.PathFolder, music, count);
+                    music.NameAfterDownload = BaseService.Download(chromeDriver, playlist.PathFolder, music, count);
                 }
                 count++;
             }
-            CheckIfDownloadedAll(playlist.PathFolder);
-            RenameFiles(playlist);
-        }
-
-        public string Download(ChromeDriver chromeDriver, string pathFolder, Music music, int count)
-        {
-            string name = RemoveNonAlpha(music.Name).Replace(" ", "+");
-            string artist = RemoveNonAlpha(music.Artist).Replace(" ", "+");
-            string downloadedTrack = "";
-            string youtubeSearch = "https://www.youtube.com/results?search_query=" + artist + "+" + name + "+audio";
-            chromeDriver.Navigate().GoToUrl(youtubeSearch);
-            IReadOnlyCollection<IWebElement> webElements = chromeDriver.FindElements(By.Id("video-title"), 1);
-            List<string> youtubeUrls = new List<string>();
-
-            foreach (var we in webElements)
-            {
-                youtubeUrls.Add(we.GetAttribute("href"));
-            }
-
-            for (int i = 0; i < youtubeUrls.Count; i++)
-            {
-                string youtubeUrl = youtubeUrls[i];
-
-                if (youtubeUrl != null)
-                {
-                    music.Number = count;
-                    downloadedTrack = YtMp3(chromeDriver, pathFolder, youtubeUrl);
-
-                    if (!string.IsNullOrEmpty(downloadedTrack))
-                    {
-                        break;
-                    }
-                }
-            }
-            return downloadedTrack;
-        }
-        public string YtMp3(ChromeDriver chromeDriver, string pathFolder, string youtubeUrl)
-        {
-            string downloadedTrack = "";
-            try
-            {
-                chromeDriver.Navigate().GoToUrl("https://ytmp3.cc/en13/");
-                WebElement = chromeDriver.FindElement(By.Id("input"), 1, 8);
-                WebElement.SendKeys(youtubeUrl);
-                WebElement = chromeDriver.FindElement(By.Id("submit"), 1, 8);
-                WebElement.Click();
-                var listTracks1 = Directory.GetFiles(pathFolder, "*").Where(s => s.EndsWith(".crdownload")).Select(Path.GetFileName).ToList();
-                WebElement = chromeDriver.FindElement(By.XPath("//a[contains(text(),'Download')]"), 1, 100);
-
-                if (WebElement == null)
-                {
-                    return "";
-                }
-
-                WebElement.Click();
-                List<String> tabs = new List<String>(chromeDriver.WindowHandles);
-
-                //To close Ad.
-                if (tabs.Count() > 1)
-                {
-                    for (int i = 1; i < tabs.Count(); i++)
-                    {
-                        chromeDriver.SwitchTo().Window(tabs[i]);
-                        chromeDriver.Close();
-                    }
-                }
-                chromeDriver.SwitchTo().Window(tabs[0]);
-
-                while (String.IsNullOrEmpty(downloadedTrack))
-                {
-                    var listTracks2 = Directory.GetFiles(pathFolder, "*").Where(s => s.EndsWith(".crdownload")).Select(Path.GetFileName).ToList();
-                    if (listTracks2.Any())
-                    {
-                        string[] separatingString = { ".mp3.crdownload" };
-                        try
-                        {
-                            downloadedTrack = listTracks2.Except(listTracks1).FirstOrDefault().Split(separatingString, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                        }
-                        catch (Exception)
-                        {
-                            downloadedTrack = listTracks1.Except(listTracks2).FirstOrDefault().Split(separatingString, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                        }
-                    }
-                }
-                CheckIfDownloadedAll(pathFolder);
-            }
-            catch (Exception ex)
-            {
-                if (ex.HResult != -2147024864)
-                {
-                    YtMp3(chromeDriver, pathFolder, youtubeUrl);
-                }
-            }
-            return downloadedTrack;
-        }
-        public void RenameFiles(Playlist playlist)
-        {
-            foreach (var music in playlist.Music)
-            {
-                if (!string.IsNullOrEmpty(music.NameAfterDownload))
-                {
-                    string newTrackName;
-                    if (music.Number < 10)
-                    {
-                        newTrackName = "0" + music.Number + " " + RemoveInvalidPathChars(music.Artist + " - " + music.Name + ".mp3");
-                    }
-                    else
-                    {
-
-                        newTrackName = music.Number + " " + RemoveInvalidPathChars(music.Artist + " - " + music.Name + ".mp3");
-                    }
-                    try
-                    {
-                        File.Move(playlist.PathFolder + "\\" + music.NameAfterDownload + ".mp3", playlist.PathFolder + "\\" + newTrackName);
-                    }
-                    catch(Exception ex)
-                    {
-
-                    }
-                }
-            }
-        }
-        public string RemoveInvalidPathChars(string name)
-        {
-            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
-            Regex r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
-            return r.Replace(name, "");
-        }
-        public string RemoveDoubleSpaces(string name)
-        {
-            RegexOptions options = RegexOptions.None;
-            Regex regex = new Regex("[ ]{2,}", options);
-            return regex.Replace(name, " ");
-        }
-        public void CheckIfDownloadedAll(string pathFolder)
-        {
-            var tracks = Directory.GetFiles(pathFolder, "*.crdownload")
-                                                            .Select(Path.GetFileName)
-                                                            .ToList();
-            if (tracks.Any())
-            {
-                Thread.Sleep(2000);
-                CheckIfDownloadedAll(pathFolder);
-            }
-        }
-        public Music FormatMusic(Music music)
-        {
-            if (music.Artist.Contains('•'))
-            {
-                string[] artist = music.Artist.Split('\n');
-                if (artist[0].Contains(','))
-                {
-                    artist = artist[0].Split(',');
-                    music.Artist = artist[0];
-                }
-                else if (!artist[0].Contains("E\r"))
-                {
-                    string[] artistTemp = artist[0].Split('\r');
-                    music.Artist = artistTemp[0];
-                }
-                else if (artist[1].Contains(','))
-                {
-                    artist = artist[1].Split(',');
-                    music.Artist = artist[0];
-                }
-                else
-                {
-                    if (artist[0].Contains("E\r"))
-                    {
-                        string[] artistTemp = artist[1].Split('\r');
-                        music.Artist = artistTemp[0];
-                    }
-                    else
-                    {
-                        string[] text1 = artist[0].Split('\r');
-                        music.Artist = text1[0];
-                    }
-                }
-            }
-            else
-            {
-                music.Artist = "";
-            }
-            return music;
-        }
-        public static string RemoveNonAlpha(string str)
-        {
-            string comAcentos = "ÄÅÁÂÀÃäáâàãÉÊËÈéêëèÍÎÏÌíîïìÖÓÔÒÕöóôòõÜÚÛüúûùÇç";
-            string semAcentos = "AAAAAAaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUuuuuCc";
-
-            for (int i = 0; i < comAcentos.Length; i++)
-            {
-                str = str.Replace(comAcentos[i].ToString(), semAcentos[i].ToString());
-            }
-
-            str = Regex.Replace(str, "[^a-zA-Z0-9 ]", "");
-            RegexOptions options = RegexOptions.None;
-            Regex regex = new Regex("[ ]{2,}", options);
-            str = regex.Replace(str, " ");
-
-            return str;
-        }
-        public bool CheckDuration(ChromeDriver chromeDriver)
-        {
-            bool result = false;
-            try
-            {
-                //check if music duration is less than 9 minutes 
-                int duration = 9;
-
-                var element = chromeDriver.FindElement(By.XPath("//ytd-video-renderer//ytd-thumbnail-overlay-time-status-renderer"), 1, 8);
-
-                string[] time = element.Text.Split(new[] { ":" }, StringSplitOptions.None);
-
-                result = time.Length <= 2 ? true : false;
-                if (result)
-                {
-                    result = int.Parse(time[0]) < duration ? true : false;
-                }
-            }
-            catch
-            {
-                CheckDuration(chromeDriver);
-            }
-            return result;
+            BaseService.WaitToDownload(playlist.PathFolder);
+            BaseService.RenameFiles(playlist);
         }
     }
 }
