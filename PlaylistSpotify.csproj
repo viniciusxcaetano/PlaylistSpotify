@@ -66,6 +66,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Converters\ytmp3.cs" />
+    <Compile Include="Forms\FormAddPlaylist.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormAddPlaylist.Designer.cs">
+      <DependentUpon>FormAddPlaylist.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\FormMain.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -81,6 +87,9 @@
     <Compile Include="Utils\BrowserSettings.cs" />
     <Compile Include="Utils\WebDriverExtensions.cs" />
     <Compile Include="VideoConverters\YtMp3.cs" />
+    <EmbeddedResource Include="Forms\FormAddPlaylist.resx">
+      <DependentUpon>FormAddPlaylist.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\FormMain.resx">
       <DependentUpon>FormMain.cs</DependentUpon>
     </EmbeddedResource>

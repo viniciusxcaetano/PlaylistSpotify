@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using OpenQA.Selenium.Chrome;
+using PlaylistSpotify.Forms;
 using PlaylistSpotify.Models;
 using PlaylistSpotify.Services;
 using PlaylistSpotify.Utils;
@@ -16,41 +17,29 @@ namespace PlaylistSpotify
         private PlaylistService playlistService { get; set; }
         public ChromeDriver chromeDriver { get; set; }
         List<Playlist> playlists { get; set; }
+        public static string defaultPath { get; set; }
+        public bool updateForm { get; set; }
         public FormMain()
         {
+            this.Activated += new EventHandler(FormMain_Activated);
             InitializeComponent();
         }
 
         public void FormMain_Load(object sender, EventArgs e)
         {
-            //List<Playlist> playlists = new List<Playlist>();
-            //playlistService = new PlaylistService();
-
-            //playlists = playlistService.GetPlaylistDataToUpdate(null);
-
-            //for (int i = 0; i < playlists.Count; i++)
-            //{
-            //    chromeDriver = new ChromeDriver(BrowserSettings.ChromeDriverService, BrowserSettings.ChromeOptions(playlists[i].PathFolder));
-            //    playlists[i] = playlistService.GetUpdatedPlaylist(chromeDriver, playlists[i]);
-            //    playlistService.UpdatePlaylist(chromeDriver, playlists[i]);
-            //    chromeDriver.Quit();
-            //}
         }
 
         private void btnSearchPath_Click(object sender, EventArgs e)
         {
-            string defaultPath = "";
+            defaultPath = "";
 
             if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
             {
                 checkedListBoxPlaylists.Items.Clear();
                 defaultPath = folderBrowserDialog1.SelectedPath;
+                btnAddPlaylist.Enabled = true;
             }
 
-            //if (string.IsNullOrWhiteSpace(defaultPath))
-            //{
-            //    defaultPath = "D:\\Music";
-            //}
             if (!string.IsNullOrEmpty(defaultPath))
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(defaultPath);
@@ -92,42 +81,31 @@ namespace PlaylistSpotify
                     }
                 }
 
-                //var namePlaylist = playlists.Select(p => p.Name).ToList();
-                //foreach (var name in namePlaylist)
-                //{
-                //    string[] splited = name.Split(new[] { "Spotify-" }, StringSplitOptions.None);
-                //    checkedListBoxPlaylists.Items.Add(splited[1]);
-                //}
                 checkedListBoxPlaylists.Items.AddRange(playlists.Select(p => p.Name).ToArray());
                 if (checkedListBoxPlaylists.Items.Count > 0)
                 {
                     btnSelectAll.Enabled = true;
                 }
-                else
-                {
-                    MessageBox.Show("Nenhuma playlist do Spotify foi localizada.");
-                }
             }
         }
-
         private void btnSelectAll_Click(object sender, EventArgs e)
         {
             if (btnSelectAll.Text == "Selecionar Todas")
             {
                 btnUpdate.Enabled = true;
                 btnSelectAll.Text = "Limpar Seleção";
-                SelectDeselectAll(true); // passing <strong>true </strong>so that all items will be checked
+                SelectDeselectAll(true);
             }
             else
             {
                 btnUpdate.Enabled = false;
                 btnSelectAll.Text = "Selecionar Todas";
-                SelectDeselectAll(false); // passing false so that all items will be unchecked
+                SelectDeselectAll(false);
             }
         }
         void SelectDeselectAll(bool Selected)
         {
-            for (int i = 0; i < checkedListBoxPlaylists.Items.Count; i++) // loop to set all items checked or unchecked
+            for (int i = 0; i < checkedListBoxPlaylists.Items.Count; i++)
             {
                 checkedListBoxPlaylists.SetItemChecked(i, Selected);
             }
@@ -153,6 +131,77 @@ namespace PlaylistSpotify
         private void checkedListBoxPlaylists_SelectedIndexChanged(object sender, EventArgs e)
         {
             btnUpdate.Enabled = checkedListBoxPlaylists.CheckedItems.Count > 0;
+        }
+
+        private void btnAddPlaylist_Click(object sender, EventArgs e)
+        {
+            updateForm = true;
+            FormAddPlaylist formAddPlaylist = new FormAddPlaylist();
+            formAddPlaylist.Show();
+        }
+
+        private void UpdateCheckedListBox()
+        {
+            if (!string.IsNullOrEmpty(defaultPath))
+            {
+                checkedListBoxPlaylists.Items.Clear();
+                DirectoryInfo directoryInfo = new DirectoryInfo(defaultPath);
+                playlists = new List<Playlist>();
+
+                if (directoryInfo.Exists)
+                {
+                    DirectoryInfo[] directorySpotify = directoryInfo.GetDirectories("*" + "Spotify" + "*.*");
+
+                    if (directorySpotify.Any())
+                    {
+                        foreach (var dirSpot in directorySpotify)
+                        {
+                            string PathFolder = defaultPath + "\\" + dirSpot.Name;
+                            string PathUrlFile = PathFolder + "\\url.txt";
+
+                            if (File.Exists(PathUrlFile))
+                            {
+                                string[] pathUrlFile = File.ReadAllLines(PathUrlFile);
+
+                                if (pathUrlFile.Any())
+                                {
+                                    string Url = pathUrlFile.FirstOrDefault();
+                                    Playlist playlist = new Playlist(defaultPath, Url)
+                                    {
+                                        Name = dirSpot.Name,
+                                        PathFolder = PathFolder,
+                                        PathUrlFile = PathUrlFile
+                                    };
+                                    playlists.Add(playlist);
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Arquivo url.txt está vazio");
+                                }
+                            }
+                            else MessageBox.Show("Arquivo url.txt não existe");
+                        }
+                    }
+                }
+                checkedListBoxPlaylists.Items.AddRange(playlists.Select(p => p.Name).ToArray());
+                if (checkedListBoxPlaylists.Items.Count > 0)
+                {
+                    btnSelectAll.Enabled = true;
+                }
+            }
+        }
+
+        void FormMain_Activated(object sender, EventArgs e)
+        {
+            var lastOpenedForm1 = Application.OpenForms.Cast<Form>().Last();
+            // or (without Linq):
+            //var lastOpenedForm2 = Application.OpenForms[Application.OpenForms.Count - 1];
+
+            if (lastOpenedForm1.Name == "FormAddPlaylist" && updateForm)
+            {
+                UpdateCheckedListBox();
+                updateForm = false;
+            }
         }
     }
 }
