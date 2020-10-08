@@ -20,42 +20,50 @@ namespace PlaylistSpotify.Services
 
             if (string.IsNullOrEmpty(playlist.Name))
             {
-                WebElement = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/div[1]/div/div[2]/div/div/div[2]/section/div[1]/div[5]/span/h1"), 1, 8);
-                playlist.Name = BaseService.RemoveInvalidPathChars(WebElement.Text);
+                WebElement = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/main/div/div[2]/div/div/div[2]/section/div[1]/div[5]/span/h1"), 1, 8);
+                if (WebElement == null)
+                {
+                    MessageBox.Show("Não foi possível achar o nome da sua playlist");
+                }
+                else
+                {
+                    playlist.Name = BaseService.RemoveInvalidPathChars(WebElement.Text);
+                }
             }
             playlist.PathFolder = playlist.Device + "\\" + playlist.Name;
             playlist.PathUrlFile = playlist.PathFolder + "\\url.txt";
 
-
-            //if (playlist.Name == "") // need this for the window when small
-            //{
-
-            //}
-
-            var root = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/div[1]/div/div[2]/div/div/div[2]/section/div[4]/div/div[2]/div[2]"), 1, 8);
-
-            for (int i = 1; i < 1000; i++)
+            var root = chromeDriver.FindElement(By.XPath("//*[@id='main']/div/div[2]/div[4]/main/div/div[2]/div/div/div[2]/section/div[4]/div/div[2]/div[2]"), 1, 8);
+            if (root == null)
             {
-                IWebElement nameSongOnSpotify;
-                IWebElement artistSongOnSpotify;
-                try
-                {
-                    nameSongOnSpotify = root.FindElement(By.XPath("//div[" + i + "]/div/div/div[2]/div/div/span/span"));
+                MessageBox.Show("root is empty");
+            }
+            else
+            {
 
+                for (int i = 1; i < 1000; i++)
+                {
+                    IWebElement nameSongOnSpotify;
+                    IWebElement artistSongOnSpotify;
                     try
                     {
-                        artistSongOnSpotify = root.FindElement(By.XPath("//div[" + i + "]/div/div/div[2]/div/span[2]/a[1]/span/span"));
+                        nameSongOnSpotify = root.FindElement(By.XPath("//div[" + i + "]/div/div/div[2]/div/div/span/span"));
+
+                        try
+                        {
+                            artistSongOnSpotify = root.FindElement(By.XPath("//div[" + i + "]/div/div/div[2]/div/span[2]/a[1]/span/span"));
+                        }
+                        catch (Exception)
+                        {
+                            artistSongOnSpotify = root.FindElement(By.XPath("//div[" + i + "]/div/div/div[2]/div/span/a/span/span"));
+                        }
+                        Music music = new Music { Artist = artistSongOnSpotify.Text, Name = nameSongOnSpotify.Text };
+                        playlist.Music.Add(music);
                     }
                     catch (Exception)
                     {
-                        artistSongOnSpotify = root.FindElement(By.XPath("//div[" + i + "]/div/div/div[2]/div/span/a/span/span"));
+                        break;
                     }
-                    Music music = new Music { Artist = artistSongOnSpotify.Text, Name = nameSongOnSpotify.Text };
-                    playlist.Music.Add(music);
-                }
-                catch (Exception)
-                {
-                    break;
                 }
             }
             return playlist;
@@ -96,6 +104,8 @@ namespace PlaylistSpotify.Services
                 {
                     if (Tracks.FirstOrDefault().Name != track)
                     {
+
+
                         File.Delete(playlist.PathFolder + "\\" + Tracks[0].Name);
                         music.NameAfterDownload = BaseService.Download(chromeDriver, playlist.PathFolder, music, count);
                     }

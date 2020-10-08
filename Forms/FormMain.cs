@@ -114,14 +114,12 @@ namespace PlaylistSpotify
         private void btnUpdate_Click(object sender, EventArgs e)
         {
             playlistService = new PlaylistService();
-            List<ChromeDriver> drivers = new List<ChromeDriver>();
             var selectedPlaylists = playlists.Where(p => checkedListBoxPlaylists.CheckedItems.Contains(p.Name)).ToList();
 
             for (int i = 0; i < selectedPlaylists.Count; i++)
             {
                 chromeDriver = new ChromeDriver(BrowserSettings.ChromeDriverService, BrowserSettings.ChromeOptions(selectedPlaylists[i].PathFolder));
-                drivers.Add(chromeDriver);
-                selectedPlaylists[i] = playlistService.GetUpdatedPlaylist(drivers[i], selectedPlaylists[i]);
+                selectedPlaylists[i] = playlistService.GetUpdatedPlaylist(chromeDriver, selectedPlaylists[i]);
                 playlistService.UpdatePlaylist(chromeDriver, selectedPlaylists[i]);
                 chromeDriver.Quit();
             }
